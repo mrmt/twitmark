@@ -1,0 +1,118 @@
+#!/usr/bin/perl
+# mubot
+# Copyright (c) 2008 Jun Morimoto <morimoto@mrmt.net>
+# This program is covered by the GNU General Public License 2
+# use lib qw(lib /usr/share/twitmark/lib);
+use POE;
+use POE::Component::IRC::State;
+use POE::Component::IRC::Plugin::AutoJoin;
+use POE::Component::IRC::Plugin::Connector;
+use Encode;
+use Config::YAML;
+use strict;
+use warnings;
+
+our $cf = Config::YAML->new(
+	config => -r $ARGV[0] ? $ARGV[0] : '/etc/twitmark.conf',
+	version => '0.1',
+	daemonize => 0,
+	irc_charset => 'jis',
+	irc_nick => 'mubot',
+	irc_desc => 'mubot',
+	irc_port => 6667,
+	reconnect_delay => 10,
+	pid_dir => '/var/run',
+	pid_file => 'mubot.pid'
+	);
+
+# daemonize
+if($cf->{daemonize}){
+	use Proc::Daemon;
+	Proc::Daemon::Init;
+	if(-d $cf->{pid_dir} && -r _ && -w _ && -x _){
+		my $fh = new IO::File('>' . $cf->{pid_dir} . '/' . $cf->{pid_file});
+		if(defined $fh){
+			print $fh $$, "\n";
+			$fh->close();
+		}
+	}
+}
+
+# create irc component
+my $irc = POE::Component::IRC::State->spawn(
+	Alias => 'mubot',
+	Nick => $cf->{irc_nick},
+	Username => $cf->{irc_username},
+	Ircname => $cf->{irc_desc},
+	Server => $cf->{irc_server},
+	Port => $cf->{irc_port},
+	Password => $cf->{irc_password});
+
+my %channels;
+if(ref($cf->{irc_channel}) eq 'ARRAY'){
+	map { $channels{$_} = '' } @{$cf->{irc_channel}}
+}else{
+	$channels{$cf->{irc_channel}} = '';
+}
+
+# create POE session
+POE::Session->create(
+	heap => {
+		Config => $cf,
+		Irc => $irc,
+		AutoJoin => new POE::Component::IRC::Plugin::AutoJoin (Channels => \%channels),
+		Connector => new POE::Component::IRC::Plugin::Connector,
+	},
+	inline_states => {
+		_start => \&irc_start,
+		connect => \&irc_connect,
+		irc_public => \&irc_public,
+		irc_msg => \&irc_msg,
+	});
+
+$poe_kernel->run();
+exit 0;
+
+################################################################
+sub irc_start{
+	my ($kernel, $heap) = @_[KERNEL, HEAP];
+	$heap->{Irc}->plugin_add('AutoJoin', $heap->{AutoJoin});
+	$heap->{Irc}->plugin_add('Connector', $heap->{Connector});
+	$heap->{Irc}->yield(register => 'all');
+	$heap->{Irc}->yield(connect => {});
+	$kernel->delay(lag_o_meter => $heap->{Config}->{reconnect_delay});
+}
+
+################################################################
+sub irc_public{
+	my ($heap, $who, $channel, $msg) = @_[HEAP, ARG0 .. ARG2];
+	$who =~ s/!.*//;
+	$msg = Encode::decode($heap->{Config}->{irc_charset}, $msg);
+	warn $channel->[0], $msg, $who; # TODO
+}
+
+################################################################
+sub irc_msg{
+	my ($heap, $who, $channel, $msg) = @_[HEAP, ARG0 .. ARG2];
+	my $cf = $heap->{Config};
+	$who =~ s/!.*//;
+
+	my $cname;
+	if ($who eq $cf->{irc_nick}) {
+		# XXX: $channel may contain two or more nicks.
+		$cname = $channel->[0];
+	} else {
+		$cname = $who;
+	}
+
+	$msg = Encode::decode($cf->{irc_charset}, $msg);
+	warn $cname, $msg, $who;		# TODO
+}
+
+################################################################
+sub irc_connect{
+	my $kernel = $_[KERNEL];
+	$kernel->post(mubot => connect => {});
+}
+
+__END__
