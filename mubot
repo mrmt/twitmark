@@ -2,18 +2,22 @@
 # mubot
 # Copyright (c) 2008 Jun Morimoto <morimoto@mrmt.net>
 # This program is covered by the GNU General Public License 2
-# use lib qw(lib /usr/share/twitmark/lib);
+
+# TODO: channel name has not i18n'ed
+
+use lib qw(lib /usr/share/twitmark/lib);
 use POE;
 use POE::Component::IRC::State;
 use POE::Component::IRC::Plugin::AutoJoin;
 use POE::Component::IRC::Plugin::Connector;
+use Twitmark;
 use Encode;
 use Config::YAML;
 use strict;
 use warnings;
 
-our $cf = Config::YAML->new(
-	config => -r $ARGV[0] ? $ARGV[0] : '/etc/twitmark.conf',
+my $cf = Config::YAML->new(
+	config => defined($ARGV[0]) && -r $ARGV[0] ? $ARGV[0] : '/etc/twitmark.conf',
 	version => '0.1',
 	daemonize => 0,
 	irc_charset => 'jis',
@@ -22,7 +26,8 @@ our $cf = Config::YAML->new(
 	irc_port => 6667,
 	reconnect_delay => 10,
 	pid_dir => '/var/run',
-	pid_file => 'mubot.pid'
+	pid_file => 'mubot.pid',
+	message_regexp => '^(\S+)\s+(https?://\S+)\s+(.*)$',
 	);
 
 # daemonize
@@ -62,12 +67,14 @@ POE::Session->create(
 		Irc => $irc,
 		AutoJoin => new POE::Component::IRC::Plugin::AutoJoin (Channels => \%channels),
 		Connector => new POE::Component::IRC::Plugin::Connector,
+		Twitmark => new Twitmark (Config => $cf),
 	},
 	inline_states => {
 		_start => \&irc_start,
 		connect => \&irc_connect,
+		irc_msg => \&irc_message,
+		irc_invite => \&irc_invite,
 		irc_public => \&irc_public,
-		irc_msg => \&irc_msg,
 	});
 
 $poe_kernel->run();
@@ -87,32 +94,60 @@ sub irc_start{
 sub irc_public{
 	my ($heap, $who, $channel, $msg) = @_[HEAP, ARG0 .. ARG2];
 	$who =~ s/!.*//;
+
 	$msg = Encode::decode($heap->{Config}->{irc_charset}, $msg);
-	warn $channel->[0], $msg, $who; # TODO
+	my $cname = Encode::decode($heap->{Config}->{irc_charset}, $channel->[0]);
+
+	if($msg =~ m/$heap->{Config}->{message_regexp}/){
+		my $m = $heap->{Twitmark}->add_mark(
+			channel => $cname,
+			nick => $who,
+			prefix => $1,
+			url => $2,
+			message => $3);	# TODO
+		$heap->{Irc}->yield(privmsg => $channel => Encode::encode($heap->{Config}->{irc_charset}, $m));
+	}
 }
 
 ################################################################
-sub irc_msg{
+sub irc_message{
 	my ($heap, $who, $channel, $msg) = @_[HEAP, ARG0 .. ARG2];
 	my $cf = $heap->{Config};
+
 	$who =~ s/!.*//;
 
 	my $cname;
 	if ($who eq $cf->{irc_nick}) {
 		# XXX: $channel may contain two or more nicks.
 		$cname = $channel->[0];
-	} else {
+	}else{
 		$cname = $who;
 	}
 
 	$msg = Encode::decode($cf->{irc_charset}, $msg);
-	warn $cname, $msg, $who;		# TODO
+	$cname = Encode::decode($cf->{irc_charset}, $cname);
+
+	if($msg =~ m/$cf->{message_regexp}/){
+		my $m = $heap->{Twitmark}->add_mark(
+			channel => $cname,
+			nick => $who,
+			prefix => $1,
+			url => $2,
+			message => $3);	# TODO
+		$heap->{Irc}->yield(privmsg => $channel => Encode::encode($cf->{irc_charset}, $m));
+	}
 }
 
 ################################################################
 sub irc_connect{
 	my $kernel = $_[KERNEL];
 	$kernel->post(mubot => connect => {});
+}
+
+################################################################
+sub irc_invite{
+	my ($heap, $channel) = @_[HEAP, ARG1];
+	$heap->{Irc}->yield(join => $channel);
 }
 
 __END__
