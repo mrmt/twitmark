@@ -1,0 +1,112 @@
+Isoternet Draft		     Mu Protocol		  September 10, 2000
+
+
+							     Fumitoshi UKAI
+						                   UKAI.ORG
+Isoternet Draft
+<draft-ukai-mu-protocol-02.txt>
+Expires	six months from:				   September 10, 2000
+
+			    Mu Protocol
+                        draft-ukai-mu-protocol-02.txt
+
+
+
+Status of this Memo
+
+     This document is an Isoternet-Draft.
+
+Copyright Notice
+
+   Copyright (C) 2000 Fumitoshi UKAI. All Rights Reserved.
+
+1.   Abstract
+
+This draft serve as a formal definition of the Mu Protocol.
+The Mu Protocol has been used as a method for notifying 
+URL to other members in some IRC channel, where "fumi-kun"
+is listening.
+
+2. Conventions used in this document
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+"SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in
+this document are to be interpreted as described in [KEYWORDS].
+
+3. Protocol Overview
+
+For a long time, we have used some convention to notify some
+interesting URL on IRC channel.  We called it as "mu" protocol,
+because we usually say "む URL" or "む URL <comment for this URL>"
+in such case.  It's very easy way and this information is very 
+useful for us, and we hope for everyone.  Therefore, we use it
+to collect useful URL informaton on IRC channel. 
+
+4. Formal Syntax
+
+The following syntax specification uses the augmented Backus-Naur
+Form (BNF) as described in [ABNF]
+
+Except as noted otherwise, all alphabetic characters are case-
+sensitive. 
+
+
+   CR = %x0D	;; ASCII CR, carriage return
+
+   CRLF = CR LF
+
+   LF = %x0A    ;; ASCII LF, line feed
+
+   SP = %x20    ;; ASCII SPACE, space
+
+   HTAB = %x09  ;; ASCII HTAB, horizontal tab
+
+   WSP = SP / HTAB
+
+   ESC = %x1B   ;; ASCII ESC, escape
+
+   VCHAR = %x21-7E / ESC
+	        ;; escape is included for ISO-2022-JP encoding [ISO-2022-JP]
+   
+   Mu_Line = Mu_prefix 1*WSP URL 1*WSP Mu_comment CRLF
+   
+   Mu_prefix = 1*VCHAR
+
+   URL = "http://" 1*VCHAR / "ftp://" 1*VCHAR / "news:" 1*VCHAR
+
+   Mu_comment = 1*VCHAR
+
+5.   Examples
+
+   む http://ukai.org/mu/draft-ukai-mu-protocol-01.txt むプロトコルのドラフト
+
+   ムム http://ukai.org/mu/ 「む」ページできたのか
+
+6.   Security Considerations
+
+   This draft does not discuss security.
+
+References
+
+   [KEYWORDS] Bradner, S., "Key words for use in RFCs to Indicate
+   Requirement Levels", RFC 2119, March 1997,
+   <ftp://ftp.isi.edu/in-notes/rfc2119.txt>
+
+   [ABNF] Crocker, Overell, "Augmented BNF for Syntax Specifications:
+   ABNF", RFC 2234, Internet Mail Consortium, Demon Internet Ltd.,
+   November 1997, <ftp://ftp.isi.edu/in-notes/rfc2234.txt>
+
+   [URL] T. Berners-Lee, L. Masinter, M. McCahill, "Uniform Resource 
+   Locators (URL)", RFC2368
+
+   [ISO-2022-JP] J. Murai, M. Crispin, E. van der Poel, "Japanese
+   Character Encoding for Internet Messages", RFC1468, June 1993
+   
+Author's Address
+
+   Fumitoshi UKAI
+   Takaido Higashi
+   Suginami, Tokyo
+   Japan
+
+   EMail: ukai@ukai.org
