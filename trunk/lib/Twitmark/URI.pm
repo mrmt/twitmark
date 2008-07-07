@@ -1,11 +1,12 @@
-# -*-perl-*-
+# -*- mode: perl, coding: utf-8 -*-
 # This file is a part of twitmark, http://code.google.com/p/twitmark/
 # Copyright (c) 2008 Jun Morimoto <morimoto@mrmt.net>
 # This program is covered by the GNU General Public License 2.
 package Twitmark::URI;
+use URI;
 use strict;
 use warnings;
-use URI;
+use utf8;
 use overload '""' => \&normalize;
 
 ################################################################
@@ -40,11 +41,20 @@ sub normalize{
 		}
 	}
 
+	# Removes typical parameter that added to blog article url
+	# from RSS feed. Damn ad-hoc
+	my %qf = $me->{uri}->query_form;
+	if(defined $qf{ref} && $qf{ref} eq 'rss'){
+		delete $qf{ref};
+		$me->{uri}->query_form(\%qf);
+	}
+
 	$me->{uri}->canonical->as_string;
 }
 
 if(__FILE__ eq $0){
 	for my $url qw(
+		http://www.barks.jp/news/?id=1000041440&ref=rss
 		http://jp.youtube.com/watch?v=_V3rM47BVrc
 		http://www.youtube.com/watch?v=_V3rM47BVrc
 		http://jp.youtube.com/watch?v=tvXPup13mKg&feature=related
@@ -74,8 +84,8 @@ if(__FILE__ eq $0){
 
 =head1 DESCTIPTION
 
-This module normalizes specified URI (make it canonical).  Only rules
-against various amazon items are impremented.
+This module normalizes specified URI (make it canonical) on an ad-hoc
+basis.
 
 =head1 CONSTRUCTORS
 
@@ -97,6 +107,10 @@ Normalizes (make it canonical) specified URI.  You can omit this
 method by just evaluate Twitmark::URI object as string.
 
 =back
+
+=head1 BUGS
+
+Rules are better to written in config YAML files.
 
 =head1 COPYRIGHT
 
