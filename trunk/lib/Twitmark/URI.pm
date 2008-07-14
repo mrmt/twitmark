@@ -52,21 +52,6 @@ sub normalize{
 	$me->{uri}->canonical->as_string;
 }
 
-if(__FILE__ eq $0){
-	for my $url qw(
-		http://www.barks.jp/news/?id=1000041440&ref=rss
-		http://jp.youtube.com/watch?v=_V3rM47BVrc
-		http://www.youtube.com/watch?v=_V3rM47BVrc
-		http://jp.youtube.com/watch?v=tvXPup13mKg&feature=related
-		http://www.amazon.co.jp/gp/product/handle-buy-box/ref=dp_start-bbf_1_glance
-		http://www.amazon.co.jp/Closer-Joy-Division/dp/B00002DE4E/ref=sr_1_7?ie=UTF8&s=music&qid=1215229635&sr=8-7
-		http://www.amazon.co.jp/exec/obidos/ASIN/B000086F7S/mrmtnet-22/ref=nosim/			){
-		print '< ', $url, "\n";
-		print '> ', new Twitmark::URI($url), "\n";
-		print "\n";
-	}
-}
-
 1;
 
 =head1 NAME
