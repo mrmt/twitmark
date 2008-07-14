@@ -1,11 +1,13 @@
+# -*-perl-*-
 use strict;
 use warnings;
-use Test::Simple tests => 14;
+use Test::Simple tests => 15;
 
 use Twitmark::URI;
 
 my $t;
 ok($t = new Twitmark::URI('http://www.barks.jp/news/?id=1000041440&ref=rss'));
+ok($t->normalize() eq 'http://www.barks.jp/news/?id=1000041440');
 ok('' . $t eq 'http://www.barks.jp/news/?id=1000041440');
 ok($t = new Twitmark::URI('http://jp.youtube.com/watch?v=_V3rM47BVrc'));
 ok('' . $t eq 'http://www.youtube.com/watch?v=_V3rM47BVrc');
