@@ -1,0 +1,1 @@
+Pick web reference from chat (irc) conversation and store as bookmarks.
